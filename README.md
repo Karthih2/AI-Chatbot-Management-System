@@ -1,4 +1,3 @@
-````markdown
 # 🤖 AI Chatbot Management System
 
 A lightweight, intelligent task management and chatbot system powered by **Python (Flask)** and **Google Gemini AI**. 
