@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Management System</title>
+    <style>
+        /* Modern Clean Styling */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f5; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        #app-container { width: 100%; max-width: 950px; height: 90vh; margin-top: 30px; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; overflow: hidden; }
+        
+        /* Left Panel: Tasks */
+        #task-panel { width: 350px; background: #f8f9fa; border-right: 1px solid #ddd; padding: 20px; display: flex; flex-direction: column; }
+        #task-panel h3 { color: #333; margin-top: 0; border-bottom: 2px solid #4a90e2; padding-bottom: 10px; display: inline-block; }
+        #task-list { list-style: none; padding: 0; overflow-y: auto; flex: 1; }
+        
+        .task-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; border-left: 5px solid #4a90e2; }
+        .task-done { text-decoration: line-through; color: #888; border-left-color: #28a745; background: #f0fff4; }
+        
+        .task-title { font-weight: bold; font-size: 1rem; }
+        .task-notes { display: block; font-size: 0.85em; color: #555; margin-top: 8px; background: #fffbe6; padding: 8px; border-radius: 5px; font-style: italic; }
+
+        /* Right Panel: Chat */
+        #chat-panel { flex: 1; display: flex; flex-direction: column; background: white; }
+        #chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; background: #4a90e2; color: white; font-weight: bold; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #f4f7f6; }
+        
+        .msg { padding: 12px 18px; border-radius: 15px; max-width: 75%; font-size: 0.95rem; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .bot { background: white; align-self: flex-start; border-bottom-left-radius: 2px; color: #333; }
+        .user { background: #4a90e2; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        #input-area { padding: 20px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; font-size: 1rem; transition: border 0.2s; }
+        input:focus { border-color: #4a90e2; }
+        button { background: #4a90e2; color: white; border: none; padding: 0 25px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #357abd; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="task-panel">
+            <h3>📝 Managed Tasks</h3>
+            <ul id="task-list"></ul>
+        </div>
+
+        <div id="chat-panel">
+            <div id="chat-header">🤖 AI Management Console</div>
+            <div id="messages">
+                <div class="msg bot">System Online. You can ask me to manage tasks, research topics, or Train me with a new personality.</div>
+            </div>
+            <div id="input-area">
+                <input type="text" id="userInput" placeholder="Type a command..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            // 1. Add User Message to Chat
+            addMessage(text, 'user');
+            input.value = '';
+
+            // 2. Send to Python Backend
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                
+                // 3. Update Chat and Tasks
+                addMessage(data.reply, 'bot');
+                renderTasks(data.tasks);
+            } catch (err) {
+                addMessage("Error: Could not connect to the server.", 'bot');
+            }
+        }
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.textContent = text;
+            const container = document.getElementById('messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('task-list');
+            list.innerHTML = ''; // Clear current list
+            
+            if (tasks.length === 0) {
+                list.innerHTML = '<li style="color:#999; text-align:center; margin-top:20px;">No tasks yet.</li>';
+                return;
+            }
+
+            tasks.forEach(t => {
+                const li = document.createElement('li');
+                li.className = `task-item ${t.done ? 'task-done' : ''}`;
+                
+                let html = `<div class="task-title">${t.task}</div>`;
+                // Only show note if it exists
+                if(t.notes) {
+                    html += `<span class="task-notes">💡 ${t.notes}</span>`;
+                }
+                
+                li.innerHTML = html;
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
